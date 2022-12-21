@@ -22,7 +22,7 @@
 with lib;
 
 let
-  runCommand_ = if local then runCommandLocal else runCommand;
+  runCommand_ = if (traceVal local) then runCommandLocal else runCommand;
   warn = if verbose then builtins.trace else (x: y: y);
   references = import (runCommand_ "references.nix" { exportReferencesGraph = [ "graph" drv ]; } ''
     (echo {
