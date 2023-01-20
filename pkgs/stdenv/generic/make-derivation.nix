@@ -171,6 +171,13 @@ let
   separateDebugInfo' = separateDebugInfo && stdenv.hostPlatform.isLinux && !(stdenv.hostPlatform.useLLVM or false);
   outputs' = outputs ++ lib.optional separateDebugInfo' "debug";
 
+  # Turn a derivation into its outPath without a string context attached.
+  # See the comment at the usage site.
+  unsafeDerivationToUntrackedOutpath = drv:
+    if lib.isDerivation drv
+    then builtins.unsafeDiscardStringContext drv.outPath
+    else drv;
+
   noNonNativeDeps = builtins.length (depsBuildTarget ++ depsBuildTargetPropagated
                                   ++ depsHostHost ++ depsHostHostPropagated
                                   ++ buildInputs ++ propagatedBuildInputs
@@ -439,6 +446,27 @@ else let
         "/bin/sh"
       ];
       __propagatedImpureHostDeps = computedPropagatedImpureHostDeps ++ __propagatedImpureHostDeps;
+    } //
+    # If we use derivations directly here, they end up as build-time dependencies.
+    # This is especially problematic in the case of disallowed*, since the disallowed
+    # derivations will be built by nix as build-time dependencies, while those
+    # derivations might take a very long time to build, or might not even build
+    # successfully on the platform used.
+    # However, in order to scan for disallowed references in the final output,
+    # knowing the out path is sufficient, and the out path can be calculated from
+    # the derivation without needing to build it, saving time and resources.
+    # While the problem is less severe for allowed*, since we want the derivation
+    # to be built eventually, we would still like to get the error early and without
+    # having to wait while nix builds a derivation that might not be used.
+    {
+      disallowedReferences =
+        map unsafeDerivationToUntrackedOutpath (attrs.disallowedReferences or [ ]);
+      disallowedRequisites =
+        map unsafeDerivationToUntrackedOutpath (attrs.disallowedRequisites or [ ]);
+      allowedReferences =
+        lib.mapNullable unsafeDerivationToUntrackedOutpath (attrs.allowedReferences or null);
+      allowedRequisites =
+        lib.mapNullable unsafeDerivationToUntrackedOutpath (attrs.allowedRequisites or null);
     };
 
   validity = checkMeta { inherit meta attrs; };
