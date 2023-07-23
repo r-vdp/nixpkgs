@@ -86,7 +86,9 @@ in
       '';
 
     environment.extraSetup = mkIf (!cfg.channel.enable) ''
-      rm $out/bin/nix-channel
+      if [ -f "$out/bin/nix-channel" ]; then
+        rm $out/bin/nix-channel
+      fi
     '';
 
     # NIX_PATH has a non-empty default according to Nix docs, so we don't unset
