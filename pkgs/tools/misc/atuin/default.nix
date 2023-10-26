@@ -4,6 +4,7 @@
 , installShellFiles
 , rustPlatform
 , libiconv
+, AppKit
 , Security
 , SystemConfiguration
 , nixosTests
@@ -28,7 +29,12 @@ rustPlatform.buildRustPackage rec {
 
   nativeBuildInputs = [ installShellFiles ];
 
-  buildInputs = lib.optionals stdenv.isDarwin [ libiconv Security SystemConfiguration ];
+  buildInputs = lib.optionals stdenv.isDarwin [
+    libiconv
+    AppKit
+    Security
+    SystemConfiguration
+  ];
 
   postInstall = ''
     installShellCompletion --cmd atuin \
