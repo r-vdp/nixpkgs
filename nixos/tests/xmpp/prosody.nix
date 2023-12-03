@@ -37,9 +37,9 @@ in import ../make-test-python.nix {
       security.pki.certificateFiles = [ "${cert pkgs}/cert.pem" ];
       console.keyMap = "fr-bepo";
       networking.extraHosts = ''
-        ${nodes.server.config.networking.primaryIPAddress} example.com
-        ${nodes.server.config.networking.primaryIPAddress} conference.example.com
-        ${nodes.server.config.networking.primaryIPAddress} uploads.example.com
+        ${nodes.server.networking.primaryIPAddress} example.com
+        ${nodes.server.networking.primaryIPAddress} conference.example.com
+        ${nodes.server.networking.primaryIPAddress} uploads.example.com
       '';
       environment.systemPackages = [
         (pkgs.callPackage ./xmpp-sendmessage.nix { connectTo = "example.com"; })

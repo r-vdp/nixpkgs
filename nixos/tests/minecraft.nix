@@ -3,7 +3,7 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
   meta = with lib.maintainers; { maintainers = [ nequissimus ]; };
 
   nodes.client = { nodes, ... }:
-      let user = nodes.client.config.users.users.alice;
+      let user = nodes.client.users.users.alice;
       in {
         imports = [ ./common/user-account.nix ./common/x11.nix ];
 
@@ -17,7 +17,7 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
   enableOCR = true;
 
   testScript = { nodes, ... }:
-    let user = nodes.client.config.users.users.alice;
+    let user = nodes.client.users.users.alice;
     in ''
       client.wait_for_x()
       client.execute("su - alice -c minecraft-launcher >&2 &")

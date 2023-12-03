@@ -6,11 +6,11 @@ import ../make-test-python.nix ({ pkgs, ... }: {
   nodes = {
     client = { nodes, pkgs, ... }: {
       networking.extraHosts = ''
-        ${nodes.server.config.networking.primaryIPAddress} example.com
+        ${nodes.server.networking.primaryIPAddress} example.com
       '';
 
       environment.systemPackages = [
-        (pkgs.callPackage ./xmpp-sendmessage.nix { connectTo = nodes.server.config.networking.primaryIPAddress; })
+        (pkgs.callPackage ./xmpp-sendmessage.nix { connectTo = nodes.server.networking.primaryIPAddress; })
       ];
     };
     server = { config, pkgs, ... }: {

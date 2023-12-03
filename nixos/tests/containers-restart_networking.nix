@@ -58,9 +58,9 @@ in import ./make-test-python.nix ({ pkgs, lib, ... }:
   };
 
   testScript = {nodes, ...}: let
-    originalSystem = nodes.client.config.system.build.toplevel;
-    eth1_bridged = nodes.client_eth1.config.system.build.toplevel;
-    eth1_rstp = nodes.client_eth1_rstp.config.system.build.toplevel;
+    originalSystem = nodes.client.system.build.toplevel;
+    eth1_bridged = nodes.client_eth1.system.build.toplevel;
+    eth1_rstp = nodes.client_eth1_rstp.system.build.toplevel;
   in ''
     client.start()
 

@@ -43,7 +43,7 @@ in
   enableOCR = true;
 
   testScript = { nodes, ... }: let
-    user = nodes.machine.config.users.users.alice;
+    user = nodes.machine.users.users.alice;
     XDG_RUNTIME_DIR = "/run/user/${toString user.uid}";
   in ''
     start_all()

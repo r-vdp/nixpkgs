@@ -35,7 +35,7 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
   # run under a real login session, with D-Bus running in the environment.
   testScript = { nodes, ... }:
     let
-      user = nodes.machine.config.users.users.alice;
+      user = nodes.machine.users.users.alice;
       gpg-uid = "alice@example.net";
       gpg-pw = "foobar9000";
       ready-file = "/tmp/secrets-dbus-init.done";

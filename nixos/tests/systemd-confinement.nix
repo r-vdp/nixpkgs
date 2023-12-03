@@ -180,5 +180,5 @@ import ./make-test-python.nix {
         assert a == b, f"{a} != {b}"
 
     machine.wait_for_unit("multi-user.target")
-  '' + nodes.machine.config.__testSteps;
+  '' + nodes.machine.__testSteps;
 }

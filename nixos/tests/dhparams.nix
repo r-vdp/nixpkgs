@@ -57,10 +57,10 @@ import ./make-test-python.nix {
   testScript = { nodes, ... }: let
     getParamPath = gen: name: let
       node = "gen${toString gen}";
-    in nodes.machine.config.specialisation.${node}.configuration.security.dhparams.params.${name}.path;
+    in nodes.machine.specialisation.${node}.configuration.security.dhparams.params.${name}.path;
 
     switchToGeneration = gen: let
-      switchCmd = "${nodes.machine.config.system.build.toplevel}/specialisation/gen${toString gen}/bin/switch-to-configuration test";
+      switchCmd = "${nodes.machine.system.build.toplevel}/specialisation/gen${toString gen}/bin/switch-to-configuration test";
     in ''
       with machine.nested("switch to generation ${toString gen}"):
         machine.succeed("${switchCmd}")
@@ -101,7 +101,7 @@ import ./make-test-python.nix {
     ${switchToGeneration 3}
 
     with subtest("ensure that 'security.dhparams.path' has been deleted"):
-        machine.fail("test -e ${nodes.machine.config.specialisation.gen3.configuration.security.dhparams.path}")
+        machine.fail("test -e ${nodes.machine.specialisation.gen3.configuration.security.dhparams.path}")
 
     ${switchToGeneration 4}
 

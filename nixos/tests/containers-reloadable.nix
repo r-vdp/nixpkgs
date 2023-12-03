@@ -44,8 +44,8 @@ in {
   };
 
   testScript = {nodes, ...}: let
-    c1System = nodes.client_c1.config.system.build.toplevel;
-    c2System = nodes.client_c2.config.system.build.toplevel;
+    c1System = nodes.client_c1.system.build.toplevel;
+    c2System = nodes.client_c2.system.build.toplevel;
   in ''
     client.start()
     client.wait_for_unit("default.target")

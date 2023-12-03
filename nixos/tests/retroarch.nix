@@ -25,7 +25,7 @@ import ./make-test-python.nix ({ pkgs, ... }:
 
     testScript = { nodes, ... }:
       let
-        user = nodes.machine.config.users.users.alice;
+        user = nodes.machine.users.users.alice;
         xdo = "${pkgs.xdotool}/bin/xdotool";
       in ''
         with subtest("Wait for login"):

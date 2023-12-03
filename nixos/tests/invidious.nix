@@ -57,11 +57,11 @@ import ./make-test-python.nix ({ pkgs, ... }: {
 
 
     def activate_specialisation(name: str):
-        machine.succeed(f"${nodes.machine.config.system.build.toplevel}/specialisation/{name}/bin/switch-to-configuration test >&2")
+        machine.succeed(f"${nodes.machine.system.build.toplevel}/specialisation/{name}/bin/switch-to-configuration test >&2")
 
 
-    url = "http://localhost:${toString nodes.machine.config.services.invidious.port}"
-    port = ${toString nodes.machine.config.services.invidious.port}
+    url = "http://localhost:${toString nodes.machine.services.invidious.port}"
+    port = ${toString nodes.machine.services.invidious.port}
 
     machine.wait_for_open_port(port)
     curl_assert_status_code(f"{url}/search", 200)

@@ -17,8 +17,8 @@ import ./make-test-python.nix ({ pkgs, ...} : {
   };
 
   testScript = {nodes, ...}: let
-    immutableSystem = nodes.machine.config.system.build.toplevel;
-    mutableSystem = nodes.mutable.config.system.build.toplevel;
+    immutableSystem = nodes.machine.system.build.toplevel;
+    mutableSystem = nodes.mutable.system.build.toplevel;
   in ''
     machine.start()
     machine.wait_for_unit("default.target")

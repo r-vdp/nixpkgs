@@ -92,7 +92,7 @@ in {
   };
 
   testScript = { nodes, ... }: let
-    cfg = nodes.server.config.services.taskserver;
+    cfg = nodes.server.services.taskserver;
     portStr = toString cfg.listenPort;
     specialisations = "${nodes.server.system.build.toplevel}/specialisation";
     newServerSystem = "${specialisations}/manual-config";

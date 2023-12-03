@@ -17,7 +17,7 @@ import ./make-test-python.nix ({ pkgs, ... }:
   };
 
   testScript = { nodes, ... }: let
-    inherit (nodes.machine.config.services) redis;
+    inherit (nodes.machine.services) redis;
     in ''
     start_all()
     machine.wait_for_unit("redis")
