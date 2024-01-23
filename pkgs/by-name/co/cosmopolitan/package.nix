@@ -5,11 +5,15 @@
 , callPackage
 , coreutils
 , substituteAll
+, runCommand
 , unzip
 , fetchurl
 }:
 
 let
+  arch = stdenv.targetPlatform.parsed.cpu.name;
+  kernel = stdenv.targetPlatform.parsed.kernel.name;
+
   ape = stdenv.mkDerivation (finalAttrs: {
     pname = "ape";
     version = "3.2.4";
@@ -34,7 +38,7 @@ let
       runHook preInstall
 
       mkdir --parent $out/bin
-      cp bin/ape-${stdenv.targetPlatform.parsed.cpu.name}.elf $out/bin/ape
+      cp bin/ape-${arch}.elf $out/bin/ape
 
       cp -a . $cosmoccbin
 
@@ -78,16 +82,44 @@ stdenv.mkDerivation (finalAttrs: {
 
   strictDeps = true;
 
-  outputs = [ "out" "dist" ];
+  outputs = [ "out" ];
 
   # slashes are significant because upstream uses o/$(MODE)/foo.o
   buildFlags = [
+    "o//tool/build/apelink.com"
+
     "o/cosmopolitan.h"
-    "o//cosmopolitan.a"
-    "o//libc/crt/crt.o"
-    "o//ape/ape.o"
+
+    "o/cosmocc.h.txt"
     "o//ape/ape.lds"
+    "o//libc/crt/crt.o"
+    "o//ape/ape.elf"
+    "o//ape/ape.macho"
+    "o//ape/ape.o"
+    "o//ape/ape-copy-self.o"
     "o//ape/ape-no-modify-self.o"
+    "o//cosmopolitan.a"
+    "o//third_party/libcxx/libcxx.a"
+    "o//tool/build/assimilate.com.dbg"
+    "o//tool/build/march-native.com.dbg"
+    "o//tool/build/mktemper.com.dbg"
+    "o//tool/build/fixupobj.com.dbg"
+    "o//tool/build/zipcopy.com.dbg"
+    "o//tool/build/mkdeps.com.dbg"
+    "o//tool/build/zipobj.com.dbg"
+    "o//tool/build/apelink.com.dbg"
+    "o//tool/build/pecheck.com.dbg"
+    "o//third_party/make/make.com.dbg"
+    "o//third_party/ctags/ctags.com.dbg"
+
+
+
+    #"o/cosmopolitan.h"
+    #"o//cosmopolitan.a"
+    #"o//libc/crt/crt.o"
+    #"o//ape/ape.o"
+    #"o//ape/ape.lds"
+    #"o//ape/ape-no-modify-self.o"
   ];
 
   buildPhase = ''
@@ -98,8 +130,8 @@ stdenv.mkDerivation (finalAttrs: {
 
     # shellcheck disable=SC2086
     local flagsArray=(
-        ''${enableParallelBuilding:+-j''${NIX_BUILD_CORES}}
-        SHELL=$SHELL
+      ''${enableParallelBuilding:+-j''${NIX_BUILD_CORES}}
+      SHELL=$SHELL
     )
     _accumFlagsArray makeFlags makeFlagsArray buildFlags buildFlagsArray
 
@@ -141,10 +173,48 @@ stdenv.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/{include,lib}
-    install o/cosmopolitan.h $out/include
-    install o/cosmopolitan.a o/libc/crt/crt.o o/ape/ape.{o,lds} o/ape/ape-no-modify-self.o $out/lib
-    cp -RT . "$dist"
+    mkdir -p "$out/bin/"
+    cp tool/cosmocc/README.md "$out/"
+    cp tool/cosmocc/LICENSE.* "$out/"
+
+    mkdir -p "$out/include/"
+    cp -R libc/isystem/* "$out/include/"
+    cp -R libc/integral "$out/include/libc/"
+    for x in $(cat o/cosmocc.h.txt); do
+      mkdir -p "$out/include/''${x%/*}/"
+      cp -f $x "$out/include/''${x%/*}/"
+    done
+
+
+    # TODO: include patched GCC
+
+    mkdir -p "$out/${arch}-${kernel}-cosmo/lib/"
+    cp -f o/libc/crt/crt.o "$out/${arch}-${kernel}-cosmo/lib/"
+    cp -f o/cosmopolitan.a "$out/${arch}-${kernel}-cosmo/lib/libcosmo.a"
+    cp -f o/third_party/libcxx/libcxx.a "$out/${arch}-${kernel}-cosmo/lib/"
+    for lib in c dl gcc_s m pthread resolv rt dl z stdc++; do
+      printf '\041\074\141\162\143\150\076\012' >"$out/${arch}-${kernel}-cosmo/lib/lib$lib.a"
+    done
+
+    cp -f o/ape/ape.o "$out/${arch}-${kernel}-cosmo/lib/"
+    cp -f o/ape/ape.lds "$out/${arch}-${kernel}-cosmo/lib/"
+    cp -f o/ape/ape-no-modify-self.o "$out/${arch}-${kernel}-cosmo/lib/"
+
+    cp -af tool/cosmocc/bin/* "$out/bin/"
+    cp -f o/ape/ape.elf "$out/bin/ape-${arch}.elf"
+    for x in assimilate march-native mktemper fixupobj zipcopy apelink pecheck mkdeps zipobj; do
+      ape o/tool/build/apelink.com \
+        -l o/ape/ape.elf \
+        -o "$out/bin/$x" \
+        o/tool/build/$x.com.dbg
+    done
+
+
+
+    #mkdir -p $out/{include,lib}
+    #install o/cosmopolitan.h $out/include
+    #install o/cosmopolitan.a o/libc/crt/crt.o o/ape/ape.{o,lds} o/ape/ape-no-modify-self.o $out/lib
+    #cp -RT . "$dist"
 
     runHook postInstall
   '';
@@ -152,6 +222,12 @@ stdenv.mkDerivation (finalAttrs: {
   passthru = {
     cosmocc = callPackage ./cosmocc.nix {
       cosmopolitan = finalAttrs.finalPackage;
+    };
+    tests = {
+      cc = runCommand "c-test" { } ''
+        ${lib.getExe' finalAttrs.finalPackage "cosmocc"} ${./hello.c}
+        ./a.out > $out
+      '';
     };
   };
 
