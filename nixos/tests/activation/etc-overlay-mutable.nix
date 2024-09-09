@@ -4,7 +4,7 @@
 
   meta.maintainers = with lib.maintainers; [ nikstur ];
 
-  nodes.machine = { pkgs, ... }: {
+  nodes.machine = { lib, config, pkgs, ... }: {
     system.etc.overlay.enable = true;
     system.etc.overlay.mutable = true;
 
@@ -15,6 +15,15 @@
     specialisation.new-generation.configuration = {
       environment.etc."newgen".text = "newgen";
     };
+
+    assertions = lib.mkIf (lib.length (lib.attrNames config.specialisation) > 0) [
+      {
+        assertion =
+          config.system.build.initialRamdisk.drvPath ==
+          config.specialisation.new-generation.configuration.system.build.initialRamdisk.drvPath;
+        message = "The initrd for the base system and the specialisation are not the same!";
+      }
+    ];
   };
 
   testScript = ''

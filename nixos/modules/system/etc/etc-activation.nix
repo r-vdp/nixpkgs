@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 {
 
@@ -34,12 +34,14 @@
         mounts = [
           {
             where = "/run/etc-metadata";
-            what = "/sysroot${config.system.build.etcMetadataImage}";
+            what = "/tmp/etc-metadata-image";
             type = "erofs";
             options = "loop";
             unitConfig.RequiresMountsFor = [
               "/sysroot/nix/store"
             ];
+            requires = [ "find-etc-metadata-image.service" ];
+            after = [ "find-etc-metadata-image.service" ];
           }
           {
             where = "/sysroot/etc";
@@ -67,20 +69,64 @@
             ];
           }
         ];
-        services = lib.mkIf config.system.etc.overlay.mutable {
-          rw-etc = {
-            unitConfig = {
-              DefaultDependencies = false;
-              RequiresMountsFor = "/sysroot";
+        services = lib.mkMerge [
+          (lib.mkIf config.system.etc.overlay.mutable {
+            rw-etc = {
+              unitConfig = {
+                DefaultDependencies = false;
+                RequiresMountsFor = "/sysroot";
+              };
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart = ''
+                  /bin/mkdir -p -m 0755 /sysroot/.rw-etc/upper /sysroot/.rw-etc/work
+                '';
+              };
             };
-            serviceConfig = {
-              Type = "oneshot";
-              ExecStart = ''
-                /bin/mkdir -p -m 0755 /sysroot/.rw-etc/upper /sysroot/.rw-etc/work
+          })
+          {
+            find-etc-metadata-image = {
+              description = "Find the path to the etc metadata image";
+              unitConfig = {
+                DefaultDependencies = false;
+                RequiresMountsFor = "/sysroot/nix/store";
+              };
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+              };
+
+              script = /* bash */ ''
+                set -uo pipefail
+
+                # Figure out what closure to boot
+                closure=
+                for o in $(< /proc/cmdline); do
+                    case $o in
+                        init=*)
+                            IFS='=' read -r -a initParam <<< "$o"
+                            closure="''${initParam[1]}"
+                            ;;
+                    esac
+                done
+
+                # Sanity check
+                if [ -z "''${closure:-}" ]; then
+                  echo 'No init= parameter on the kernel command line' >&2
+                  exit 1
+                fi
+
+                # Resolve symlinks in the init parameter
+                closure="$(chroot /sysroot ${lib.getExe' pkgs.coreutils "realpath"} "$closure")"
+                # Assume the directory containing the init script is the closure.
+                closure="$(dirname "$closure")"
+
+                metadata_image="$(chroot /sysroot ${lib.getExe' pkgs.coreutils "realpath"} "$closure/etc-metadata-image")"
+                ln -s "/sysroot$metadata_image" /tmp/etc-metadata-image
               '';
             };
-          };
-        };
+          }
+        ];
       };
 
     })
