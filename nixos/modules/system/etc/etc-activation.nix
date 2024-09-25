@@ -37,11 +37,14 @@
             what = "/tmp/etc-metadata-image";
             type = "erofs";
             options = "loop";
-            unitConfig.RequiresMountsFor = [
-              "/sysroot/nix/store"
-            ];
+            unitConfig = {
+              DefaultDependencies = false;
+              RequiresMountsFor = [
+                "/sysroot/nix/store"
+              ];
+            };
             requires = [ "find-etc-metadata-image.service" ];
-            after = [ "find-etc-metadata-image.service" ];
+            after = [ "local-fs-pre.target" "find-etc-metadata-image.service" ];
           }
           {
             where = "/sysroot/etc";
@@ -87,6 +90,8 @@
           {
             find-etc-metadata-image = {
               description = "Find the path to the etc metadata image";
+              before = [ "shutdown.target" ];
+              conflicts = [ "shutdown.target" ];
               unitConfig = {
                 DefaultDependencies = false;
                 RequiresMountsFor = "/sysroot/nix/store";
