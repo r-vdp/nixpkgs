@@ -22,6 +22,7 @@
   wayland,
   xdg-utils,
 
+  nix-update-script,
 }:
 let
   rpathLibs =
@@ -43,16 +44,16 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "alacritty";
-  version = "0.14.0";
+  version = "0.15.0-rc1";
 
   src = fetchFromGitHub {
     owner = "alacritty";
     repo = pname;
     tag = "v${version}";
-    hash = "sha256-ZhkuuxTx2y8vOfxfpDpJAyNyDdRWab0pqyDdbOCQ2XE=";
+    hash = "sha256-wZ2SxGP3tcPruDgM+sFaZtjeQVA2Y4P5YWU6qXKFnuM=";
   };
 
-  cargoHash = "sha256-T+/G2z7H/egJ/IlP3KA31jydg1CmFdLW8bLYSf/yWck=";
+  cargoHash = "sha256-Ca78b89TJNV0djd0qZnb2pKCd44HA05v010ac2paadY=";
 
   nativeBuildInputs = [
     cmake
@@ -121,7 +122,10 @@ rustPlatform.buildRustPackage rec {
 
   dontPatchELF = true;
 
-  passthru.tests.test = nixosTests.terminal-emulators.alacritty;
+  passthru = {
+    tests.test = nixosTests.terminal-emulators.alacritty;
+    updateScript = nix-update-script { };
+  };
 
   meta = with lib; {
     description = "Cross-platform, GPU-accelerated terminal emulator";
