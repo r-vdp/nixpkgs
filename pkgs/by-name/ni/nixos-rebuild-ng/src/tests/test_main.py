@@ -240,7 +240,7 @@ def test_execute_nix_boot(mock_run: Mock, tmp_path: Path) -> None:
 
     nr.execute(["nixos-rebuild", "boot", "--no-flake", "-vvv", "--no-reexec"])
 
-    assert mock_run.call_count == 7
+    assert mock_run.call_count == 8
     mock_run.assert_has_calls(
         [
             call(
@@ -274,7 +274,13 @@ def test_execute_nix_boot(mock_run: Mock, tmp_path: Path) -> None:
                 **DEFAULT_RUN_KWARGS,
             ),
             call(
+                ["test", "-d", "/run/systemd/system"],
+                check=False,
+                **DEFAULT_RUN_KWARGS,
+            ),
+            call(
                 [
+                    *nr.nix.SET_PROFILE_CMD_PREFIX,
                     "nix-env",
                     "-p",
                     Path("/nix/var/nix/profiles/system"),
@@ -469,7 +475,7 @@ def test_execute_nix_switch_flake(mock_run: Mock, tmp_path: Path) -> None:
         ]
     )
 
-    assert mock_run.call_count == 4
+    assert mock_run.call_count == 5
     mock_run.assert_has_calls(
         [
             call(
@@ -491,8 +497,14 @@ def test_execute_nix_switch_flake(mock_run: Mock, tmp_path: Path) -> None:
                 **DEFAULT_RUN_KWARGS,
             ),
             call(
+                ["test", "-d", "/run/systemd/system"],
+                check=False,
+                **DEFAULT_RUN_KWARGS,
+            ),
+            call(
                 [
                     "sudo",
+                    *nr.nix.SET_PROFILE_CMD_PREFIX,
                     "nix-env",
                     "-p",
                     Path("/nix/var/nix/profiles/system"),
@@ -588,7 +600,7 @@ def test_execute_nix_switch_build_target_host(
         ]
     )
 
-    assert mock_run.call_count == 11
+    assert mock_run.call_count == 12
     mock_run.assert_has_calls(
         [
             call(
@@ -704,7 +716,21 @@ def test_execute_nix_switch_build_target_host(
                     *nr.process.SSH_DEFAULT_OPTS,
                     "user@target-host",
                     "--",
+                    "test",
+                    "-d",
+                    "/run/systemd/system",
+                ],
+                check=False,
+                **DEFAULT_RUN_KWARGS,
+            ),
+            call(
+                [
+                    "ssh",
+                    *nr.process.SSH_DEFAULT_OPTS,
+                    "user@target-host",
+                    "--",
                     "sudo",
+                    *nr.nix.SET_PROFILE_CMD_PREFIX,
                     "nix-env",
                     "-p",
                     "/nix/var/nix/profiles/system",
@@ -783,7 +809,7 @@ def test_execute_nix_switch_flake_target_host(
         ]
     )
 
-    assert mock_run.call_count == 5
+    assert mock_run.call_count == 6
     mock_run.assert_has_calls(
         [
             call(
@@ -811,7 +837,21 @@ def test_execute_nix_switch_flake_target_host(
                     *nr.process.SSH_DEFAULT_OPTS,
                     "user@localhost",
                     "--",
+                    "test",
+                    "-d",
+                    "/run/systemd/system",
+                ],
+                check=False,
+                **DEFAULT_RUN_KWARGS,
+            ),
+            call(
+                [
+                    "ssh",
+                    *nr.process.SSH_DEFAULT_OPTS,
+                    "user@localhost",
+                    "--",
                     "sudo",
+                    *nr.nix.SET_PROFILE_CMD_PREFIX,
                     "nix-env",
                     "-p",
                     "/nix/var/nix/profiles/system",
@@ -891,7 +931,7 @@ def test_execute_nix_switch_flake_build_host(
         ]
     )
 
-    assert mock_run.call_count == 7
+    assert mock_run.call_count == 8
     mock_run.assert_has_calls(
         [
             call(
@@ -942,6 +982,16 @@ def test_execute_nix_switch_flake_build_host(
             ),
             call(
                 [
+                    "test",
+                    "-d",
+                    "/run/systemd/system",
+                ],
+                check=False,
+                **DEFAULT_RUN_KWARGS,
+            ),
+            call(
+                [
+                    *nr.nix.SET_PROFILE_CMD_PREFIX,
                     "nix-env",
                     "-p",
                     Path("/nix/var/nix/profiles/system"),

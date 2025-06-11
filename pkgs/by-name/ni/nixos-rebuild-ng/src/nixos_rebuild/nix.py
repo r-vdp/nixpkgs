@@ -30,6 +30,18 @@ from .utils import Args, dict_to_flags
 
 FLAKE_FLAGS: Final = ["--extra-experimental-features", "nix-command flakes"]
 FLAKE_REPL_TEMPLATE: Final = "repl.nix.template"
+SET_PROFILE_CMD_PREFIX: Final = [
+    "systemd-run",
+    "--collect",
+    "--no-ask-password",
+    "--pipe",
+    "--quiet",
+    "--service-type=exec",
+    "--unit=nixos-rebuild-set-profile",
+    "--property=Delegate=yes",
+    "--property=DelegateSubgroup=supervisor",
+    "--",
+]
 SWITCH_TO_CONFIGURATION_CMD_PREFIX: Final = [
     "systemd-run",
     "-E",
@@ -44,6 +56,9 @@ SWITCH_TO_CONFIGURATION_CMD_PREFIX: Final = [
     "--quiet",
     "--service-type=exec",
     "--unit=nixos-rebuild-switch-to-configuration",
+    "--property=Delegate=yes",
+    "--property=DelegateSubgroup=supervisor",
+    "--",
 ]
 logger: Final = logging.getLogger(__name__)
 
@@ -641,8 +656,28 @@ def set_profile(
             ).strip()
             raise NixOSRebuildError(msg)
 
+    r = run_wrapper(
+        ["test", "-d", "/run/systemd/system"],
+        remote=target_host,
+        check=False,
+    )
+    cmd = SET_PROFILE_CMD_PREFIX
+    if r.returncode:
+        logger.debug(
+            "skipping systemd-run to set the profile since systemd is "
+            "not working in target host"
+        )
+        cmd = []
+
     run_wrapper(
-        ["nix-env", "-p", profile.path, "--set", path_to_config],
+        [
+            *cmd,
+            "nix-env",
+            "-p",
+            profile.path,
+            "--set",
+            path_to_config,
+        ],
         remote=target_host,
         sudo=sudo,
     )

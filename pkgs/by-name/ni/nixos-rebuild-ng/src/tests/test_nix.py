@@ -684,7 +684,14 @@ def test_set_profile(mock_run: Mock) -> None:
     )
 
     mock_run.assert_called_with(
-        ["nix-env", "-p", profile_path, "--set", config_path],
+        [
+            *n.SET_PROFILE_CMD_PREFIX,
+            "nix-env",
+            "-p",
+            profile_path,
+            "--set",
+            config_path,
+        ],
         remote=None,
         sudo=False,
     )
