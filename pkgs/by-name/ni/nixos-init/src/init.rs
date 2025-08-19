@@ -54,18 +54,19 @@ fn setup_nix_store_permissions(prefix: &str) {
 fn remount_nix_store(prefix: &str, nix_store_mount_opts: &[String]) -> Result<()> {
     let nix_store_path = prefixed_store_path(prefix);
 
-    let mounts = Mounts::parse_from_proc_mounts()?;
-    let Some(last_nix_store_mount) = mounts.find_mountpoint(&nix_store_path) else {
-        log::error!("Failed to find mountpoint of {nix_store_path}");
-        return Ok(());
-    };
-
     let mut missing_opts = Vec::new();
-    for opt in nix_store_mount_opts {
-        if !last_nix_store_mount.mntopts.contains(opt) {
-            missing_opts.push(opt.to_string());
+    let mounts = Mounts::parse_from_proc_mounts()?;
+
+    if let Some(last_nix_store_mount) = mounts.find_mountpoint(&nix_store_path) {
+        for opt in nix_store_mount_opts {
+            if !last_nix_store_mount.mntopts.contains(opt) {
+                missing_opts.push(opt.to_string());
+            }
         }
-    }
+    } else {
+        log::info!("{nix_store_path} is not a mountpoint");
+        missing_opts.extend_from_slice(nix_store_mount_opts);
+    };
 
     if !missing_opts.is_empty() {
         log::info!("Nix store is missing mount options. Remounting with {missing_opts:?}...");
