@@ -105,7 +105,9 @@ in
         machine.wait_for_unit("multi-user.target")
 
         machine.succeed("test -e /boot/loader/entries/nixos-generation-1.conf")
-        machine.succeed("grep 'sort-key nixos' /boot/loader/entries/nixos-generation-1.conf")
+        out = machine.succeed("cat /boot/loader/entries/nixos-generation-1.conf")
+        print(out)
+        machine.succeed("grep 'sort-key nixor' /boot/loader/entries/nixos-generation-1.conf")
 
         # Ensure we actually booted using systemd-boot
         # Magic number is the vendor UUID used by systemd-boot.
