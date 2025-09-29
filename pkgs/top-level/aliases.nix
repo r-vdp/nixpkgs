@@ -1440,6 +1440,7 @@ mapAliases {
   linux_6_14 = linuxKernel.kernels.linux_6_14;
   linux_6_15 = linuxKernel.kernels.linux_6_15;
   linux_6_16 = linuxKernel.kernels.linux_6_16;
+  linux_6_17 = linuxKernel.kernels.linux_6_17;
   linux_ham = linuxKernel.kernels.linux_ham;
   linux_rpi0 = linuxKernel.kernels.linux_rpi1;
   linux_rpi02w = linuxKernel.kernels.linux_rpi3;
