@@ -69,6 +69,33 @@ let
 
   etcHardlinks = lib.filter (f: f.mode != "symlink" && f.mode != "direct-symlink") etc';
 
+  # When a directory is created in /etc that does not exist in the lowerdir,
+  # overlayfs marks it opaque in the upperdir. If a later generation then adds
+  # entries under that same directory to the metadata layer, the stale opaque
+  # marker hides them. This script clears opaque markers from upperdir
+  # directories that now exist as directories in the new metadata layer, so
+  # that declaratively-configured entries are always visible.
+  #
+  # Removing the opaque flag turns the directory back into a merged view:
+  # files that the user placed in the upperdir remain visible (upperdir wins
+  # per-entry), individual whiteouts for deleted files are preserved, and
+  # lowerdir entries that were previously hidden become visible again.
+  #
+  # See https://github.com/NixOS/nixpkgs/issues/505475
+  #
+  # Usage: etc-clear-opaque-upper-dirs <metadata-mount> <upperdir>
+  etcClearOpaqueUpperDirs = pkgs.writeShellScript "etc-clear-opaque-upper-dirs" ''
+    metadataMount="$1"
+    upperDir="$2"
+    ${pkgs.findutils}/bin/find "$metadataMount" -mindepth 1 -type d -printf '%P\0' |
+      while IFS= read -r -d "" dir; do
+        target="$upperDir/$dir"
+        if [[ -d "$target" ]]; then
+          ${pkgs.attr}/bin/setfattr --no-dereference --remove=trusted.overlay.opaque "$target" 2>/dev/null || true
+        fi
+      done
+  '';
+
 in
 
 {
@@ -243,6 +270,7 @@ in
   config = {
 
     system.build.etc = etc;
+    system.build.etcClearOpaqueUpperDirs = etcClearOpaqueUpperDirs;
     system.build.etcActivationCommands =
       let
         etcOverlayOptions = lib.concatStringsSep "," (
@@ -284,6 +312,12 @@ in
 
             tmpMetadataMount=$(TMPDIR="/run" mktemp --directory -t nixos-etc-metadata.XXXXXXXXXX)
             mount --type erofs --options ro,nodev,nosuid ${config.system.build.etcMetadataImage} "$tmpMetadataMount"
+
+            ${lib.optionalString config.system.etc.overlay.mutable ''
+              # Clear stale opaque markers from the upperdir so that lowerdir
+              # entries added by the new generation are visible.
+              ${config.system.build.etcClearOpaqueUpperDirs} "$tmpMetadataMount" /.rw-etc/upper
+            ''}
 
             # There was no previous /etc mounted. This happens when we're called
             # directly without an initrd, like with nixos-enter.

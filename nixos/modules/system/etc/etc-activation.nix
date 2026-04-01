@@ -5,6 +5,9 @@
   ...
 }:
 
+let
+  inherit (config.system.build) etcClearOpaqueUpperDirs;
+in
 {
 
   imports = [ ./etc.nix ];
@@ -51,6 +54,14 @@
       ];
 
       boot.initrd.systemd = {
+        storePaths = lib.mkIf config.system.etc.overlay.mutable [
+          # make-initrd-ng does not follow store-path references in scripts,
+          # so explicitly list the interpreter and tools the script invokes.
+          etcClearOpaqueUpperDirs
+          pkgs.runtimeShell
+          "${pkgs.findutils}/bin/find"
+          "${pkgs.attr}/bin/setfattr"
+        ];
         mounts = [
           {
             where = "/run/nixos-etc-metadata";
@@ -131,13 +142,20 @@
               before = [ "initrd-fs.target" ];
               unitConfig = {
                 DefaultDependencies = false;
-                RequiresMountsFor = "/sysroot";
+                RequiresMountsFor = [
+                  "/sysroot"
+                  # Needed so we can clear stale opaque markers from the
+                  # upperdir based on the contents of the new metadata layer
+                  # before the overlay is mounted.
+                  "/run/nixos-etc-metadata"
+                ];
               };
               serviceConfig = {
                 Type = "oneshot";
-                ExecStart = ''
-                  /bin/mkdir -p -m 0755 /sysroot/.rw-etc/upper /sysroot/.rw-etc/work
-                '';
+                ExecStart = [
+                  "/bin/mkdir -p -m 0755 /sysroot/.rw-etc/upper /sysroot/.rw-etc/work"
+                  "${etcClearOpaqueUpperDirs} /run/nixos-etc-metadata /sysroot/.rw-etc/upper"
+                ];
               };
             };
           })
