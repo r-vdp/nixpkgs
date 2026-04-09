@@ -629,6 +629,28 @@ let
     n: g: g.gid != null
   ) config.boot.initrd.systemd.groups) "gid";
   groupNames = lib.mapAttrsToList (n: g: g.name) cfg.groups;
+
+  # Find pairs of explicitly configured subordinate id ranges that overlap
+  # across users. Overlapping ranges let one user's unprivileged containers
+  # access another's, so reject them at eval time. Auto-allocated ranges are
+  # checked at runtime by nixos-subids / update-users-groups.pl.
+  overlappingSubIdRanges =
+    rangesAttr: startAttr:
+    let
+      flat = lib.concatMap (
+        u:
+        map (r: {
+          inherit (u) name;
+          start = r.${startAttr};
+          inherit (r) count;
+        }) u.${rangesAttr}
+      ) (attrValues cfg.users);
+      sorted = lib.sort (a: b: a.start < b.start) flat;
+      pairs = lib.zipListsWith (a: b: { inherit a b; }) sorted (lib.drop 1 sorted);
+    in
+    lib.filter (p: p.a.name != p.b.name && p.a.start + p.a.count > p.b.start) pairs;
+  overlappingSubUidRanges = overlappingSubIdRanges "subUidRanges" "startUid";
+  overlappingSubGidRanges = overlappingSubIdRanges "subGidRanges" "startGid";
   usersWithoutExistingGroup = lib.filterAttrs (
     n: u: u.group != "" && !lib.elem u.group groupNames
   ) cfg.users;
@@ -1245,7 +1267,22 @@ in
       );
 
       warnings =
-        flip concatMap (attrValues cfg.users) (
+        (
+          let
+            fmt =
+              p:
+              "  ${p.a.name}:${toString p.a.start}:${toString p.a.count} overlaps ${p.b.name}:${toString p.b.start}:${toString p.b.count}";
+            mkWarning = what: pairs: ''
+              users.users.<name>.${what} overlap across users:
+              ${lib.concatMapStringsSep "\n" fmt pairs}
+              Overlapping subordinate id ranges allow one user's unprivileged
+              containers to access another's. Consider assigning disjoint ranges.
+            '';
+          in
+          optional (overlappingSubUidRanges != [ ]) (mkWarning "subUidRanges" overlappingSubUidRanges)
+          ++ optional (overlappingSubGidRanges != [ ]) (mkWarning "subGidRanges" overlappingSubGidRanges)
+        )
+        ++ flip concatMap (attrValues cfg.users) (
           user:
           let
             passwordOptions = [
