@@ -2477,6 +2477,21 @@ in
           security.pam.rssh.settings.authorized_keys_command to be set.
         '';
       }
+      {
+        # unix_chkpwd is installed setgid `shadow` (see security.wrappers below),
+        # which makes membership of that group equivalent to read access to all
+        # password hashes. The group exists purely as a setgid target; nothing
+        # should be a member of it. This also covers users.users.*.extraGroups,
+        # which is folded into `members` by the users-groups module. It cannot
+        # cover SupplementaryGroups= in systemd units.
+        assertion = (config.users.groups.shadow.members or [ ]) == [ ];
+        message = ''
+          The `shadow` group must have no members. /etc/shadow is mode 0640
+          group `shadow` and unix_chkpwd is setgid `shadow`, so membership of
+          this group grants read access to all password hashes.
+          Current members: ${toString config.users.groups.shadow.members}
+        '';
+      }
     ];
 
     warnings =
@@ -2521,10 +2536,15 @@ in
       ++ lib.optionals config.security.pam.u2f.enable [ pkgs.pam_u2f ];
 
     security.wrappers = {
+      # setgid `shadow` instead of setuid root: unix_chkpwd only needs to
+      # read /etc/shadow (written 0640 root:shadow by update-users-groups.pl
+      # and by userborn when the shadow group exists). A code-exec bug then
+      # yields gid `shadow` (offline hash brute-force) rather than full root.
+      # This is what Debian/Ubuntu ship.
       unix_chkpwd = {
-        setuid = true;
+        setgid = true;
         owner = "root";
-        group = "root";
+        group = config.users.groups.shadow.name;
         source = "${package}/bin/unix_chkpwd";
       };
     };
