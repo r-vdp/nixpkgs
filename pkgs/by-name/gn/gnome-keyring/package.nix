@@ -16,11 +16,19 @@
   libcap_ng,
   libselinux,
   p11-kit,
+  systemdLibs,
   wrapGAppsNoGuiHook,
   docbook-xsl-nons,
   docbook_xml_dtd_43,
   gnome,
-  useWrappedDaemon ? true,
+  # Rewrite the daemon path in autostart/D-Bus files to the NixOS
+  # security wrapper that grants cap_ipc_lock. Off by default: the wrapper
+  # hard-fails under no_new_privs (any user-service seccomp option forces
+  # nnp), and mlock() succeeds without the cap as long as RLIMIT_MEMLOCK
+  # permits, which the NixOS module ensures via LimitMEMLOCK= on the
+  # socket-activated unit. The PAM module always uses the bare binary
+  # regardless of this option (compiled-in path).
+  useWrappedDaemon ? false,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -57,6 +65,7 @@ stdenv.mkDerivation (finalAttrs: {
     libselinux
     gcr
     p11-kit
+    systemdLibs
   ];
 
   nativeCheckInputs = [
@@ -68,8 +77,6 @@ stdenv.mkDerivation (finalAttrs: {
     # installation directories
     "-Dpkcs11-config=${placeholder "out"}/etc/pkcs11" # todo: this should probably be /share/p11-kit/modules
     "-Dpkcs11-modules=${placeholder "out"}/lib/pkcs11"
-    # TODO: enable socket activation
-    "-Dsystemd=disabled"
   ];
 
   # Tends to fail non-deterministically.
@@ -100,7 +107,9 @@ stdenv.mkDerivation (finalAttrs: {
           --replace-fail "OnlyShowIn=" "#OnlyShowIn="
       done
     ''
-    # Use wrapped gnome-keyring-daemon with cap_ipc_lock=ep
+    # Use wrapped gnome-keyring-daemon with cap_ipc_lock=ep. The systemd
+    # unit is intentionally left pointing at the bare binary so it keeps
+    # working under no_new_privs; mlock() relies on RLIMIT_MEMLOCK there.
     + lib.optionalString useWrappedDaemon ''
       files=($out/etc/xdg/autostart/* $out/share/dbus-1/services/*)
 
