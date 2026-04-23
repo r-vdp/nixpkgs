@@ -37,11 +37,20 @@ in
 
     security.pam.services.login.enableGnomeKeyring = true;
 
-    security.wrappers.gnome-keyring-daemon = {
-      owner = "root";
-      group = "root";
-      capabilities = "cap_ipc_lock=ep";
-      source = "${pkgs.gnome-keyring}/bin/gnome-keyring-daemon";
+    # The socket listens on %t/keyring/control; pam_gnome_keyring connects
+    # there to send the unlock password, which socket-activates the daemon
+    # inside the named unit so it has a stable place for drop-ins and
+    # restarts.
+    systemd.packages = [ pkgs.gnome-keyring ];
+    systemd.user.sockets.gnome-keyring-daemon.wantedBy = [ "sockets.target" ];
+    systemd.user.services.gnome-keyring-daemon.serviceConfig = {
+      # The daemon mlock()s its secret-memory pool (16 KiB blocks). It
+      # checks for CAP_IPC_LOCK and warns if absent, but the actual
+      # mlock() only needs RLIMIT_MEMLOCK headroom. Granting the cap via
+      # a setcap wrapper hard-fails under no_new_privs (which any seccomp
+      # sandbox option on a user unit forces), so set the rlimit instead.
+      LimitMEMLOCK = "64M";
+      Slice = "session.slice";
     };
   };
 }
