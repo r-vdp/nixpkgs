@@ -1377,6 +1377,11 @@ in
       (mkIf pkgs.stdenv.hostPlatform.isx86 [
         "-usb"
         "-device usb-tablet,bus=usb-bus.0"
+        # kvm-pit default (delay) sets PIT reinject, which inhibits
+        # APICv/AVIC for the whole VM and forces a VM-exit per
+        # interrupt. NixOS guests use kvmclock, so discard is safe.
+        # No-op under TCG.
+        "-global kvm-pit.lost_tick_policy=discard"
       ])
       (mkIf pkgs.stdenv.hostPlatform.isAarch [
         "-device virtio-gpu-pci"
