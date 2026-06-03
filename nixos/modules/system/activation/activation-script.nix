@@ -237,7 +237,8 @@ in
       visible = false;
       description = ''
         The {manpage}`env(1)` executable that is linked system-wide to
-        `/usr/bin/env`.
+        `/usr/bin/env`. When set to `null`, `/usr/bin/env` is removed
+        at activation.
       '';
     };
 

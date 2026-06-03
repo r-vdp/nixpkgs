@@ -200,9 +200,10 @@ in
       visible = false;
       description = ''
         The shell executable that is linked system-wide to
-        `/bin/sh`. Please note that NixOS assumes all
-        over the place that shell to be Bash, so override the default
-        setting only if you know exactly what you're doing.
+        `/bin/sh`. When set to `null`, `/bin/sh` is removed at
+        activation. Please note that NixOS assumes all over the place
+        that shell to be Bash, so override the default setting only if
+        you know exactly what you're doing.
       '';
     };
 
