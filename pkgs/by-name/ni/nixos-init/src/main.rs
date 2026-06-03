@@ -3,7 +3,8 @@ use std::{env, io::Write, process::ExitCode};
 use log::Level;
 
 use nixos_init::{
-    env_generator, initrd_etc_overlay, initrd_init, mount_etc_overlay, resolve_in_root,
+    activate_main, env_generator, initrd_etc_overlay, initrd_init, mount_etc_overlay,
+    resolve_in_root,
 };
 
 fn main() -> ExitCode {
@@ -14,6 +15,7 @@ fn main() -> ExitCode {
 
     setup_logger();
     let entrypoint = match arg0.as_str() {
+        "activate" => activate_main,
         "mount-etc-overlay" => mount_etc_overlay,
         "initrd-etc-overlay" => initrd_etc_overlay,
         "resolve-in-root" => resolve_in_root,
