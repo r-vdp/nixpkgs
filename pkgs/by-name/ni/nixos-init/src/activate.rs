@@ -54,18 +54,28 @@ pub fn activate(prefix: &str, toplevel: impl AsRef<Path>, config: &Config) -> Re
     log::info!("Setting up /usr/bin...");
     setup_usrbin(prefix)?;
 
-    if let Some(env_path) = &config.env_binary {
-        log::info!("Setting up /usr/bin/env...");
-        setup_usrbinenv(prefix, env_path)?;
-    } else {
-        log::info!("No env binary provided. Not setting up /usr/bin/env.");
+    match config.env_binary.as_deref() {
+        None => log::info!("/usr/bin/env not managed by nixos-init."),
+        Some("") => {
+            log::info!("Removing /usr/bin/env...");
+            remove_usrbinenv(prefix)?;
+        }
+        Some(path) => {
+            log::info!("Setting up /usr/bin/env...");
+            setup_usrbinenv(prefix, path)?;
+        }
     }
 
-    if let Some(sh_path) = &config.sh_binary {
-        log::info!("Setting up /bin/sh...");
-        setup_binsh(prefix, sh_path)?;
-    } else {
-        log::info!("No sh binary provided. Not setting up /bin/sh.");
+    match config.sh_binary.as_deref() {
+        None => log::info!("/bin/sh not managed by nixos-init."),
+        Some("") => {
+            log::info!("Removing /bin/sh...");
+            remove_binsh(prefix)?;
+        }
+        Some(path) => {
+            log::info!("Setting up /bin/sh...");
+            setup_binsh(prefix, path)?;
+        }
     }
 
     log::info!("Setting up /bin...");
@@ -148,6 +158,14 @@ fn setup_usrbinenv(prefix: &str, env_binary: impl AsRef<Path>) -> Result<()> {
     atomic_symlink(&env_binary, usrbin_path.join("env"))
 }
 
+/// Remove `/usr/bin/env`.
+///
+/// `/usr/bin` itself is kept by `setup_usrbin` so that `/usr` is never empty, which systemd
+/// treats as a fatal boot error.
+fn remove_usrbinenv(prefix: &str) -> Result<()> {
+    remove_if_exists(&PathBuf::from(prefix).join("usr/bin/env"))
+}
+
 /// Setup /bin/sh.
 ///
 /// `/bin/sh` is an essential part of a Linux system as this path is hardcoded in the `system()` call
@@ -158,6 +176,22 @@ fn setup_usrbinenv(prefix: &str, env_binary: impl AsRef<Path>) -> Result<()> {
 fn setup_binsh(prefix: &str, sh_binary: impl AsRef<Path>) -> Result<()> {
     let usrbin_path = PathBuf::from(prefix).join("usr/bin");
     atomic_symlink(&sh_binary, usrbin_path.join("sh"))
+}
+
+/// Remove `/bin/sh`.
+///
+/// The symlink lives in `/usr/bin`. A `sh` left in an old `/bin` directory is removed when
+/// `setup_bin_symlink` migrates it.
+fn remove_binsh(prefix: &str) -> Result<()> {
+    remove_if_exists(&PathBuf::from(prefix).join("usr/bin/sh"))
+}
+
+fn remove_if_exists(path: &Path) -> Result<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e).with_context(|| format!("Failed to remove {}", path.display())),
+    }
 }
 
 /// Make `/bin` a symlink to `usr/bin`.
@@ -238,6 +272,26 @@ mod tests {
 
         let usrbin = prefix.path().join("usr/bin");
         assert_eq!(fs::metadata(&usrbin)?.permissions().mode() & 0o777, 0o755);
+        Ok(())
+    }
+
+    #[test]
+    fn remove_binsh_migrates_bin_dir() -> Result<()> {
+        let prefix = tempdir()?;
+        fs::create_dir(prefix.path().join("bin"))?;
+        std::os::unix::fs::symlink(SH, prefix.path().join("bin/sh"))?;
+
+        let prefix_str = prefix.path().to_str().unwrap();
+        setup_usrbin(prefix_str)?;
+        remove_binsh(prefix_str)?;
+        setup_bin_symlink(prefix_str)?;
+
+        assert_eq!(
+            fs::read_link(prefix.path().join("bin"))?,
+            Path::new("usr/bin")
+        );
+        assert!(!prefix.path().join("usr/bin/sh").exists());
+        assert!(!prefix.path().join(".bin.tmp").exists());
         Ok(())
     }
 }
