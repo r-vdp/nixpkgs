@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 
 pub use crate::{
-    activate::activate,
+    activate::{activate, activate_main},
     env_generator::env_generator,
     etc_overlay::{initrd_etc_overlay, mount_etc_overlay},
     init::init,

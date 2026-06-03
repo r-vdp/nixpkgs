@@ -45,6 +45,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   };
 
   binaries = [
+    "activate"
     "initrd-init"
     "initrd-etc-overlay"
     "mount-etc-overlay"
