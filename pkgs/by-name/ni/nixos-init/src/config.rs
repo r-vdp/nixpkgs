@@ -18,6 +18,16 @@ pub struct Config {
     pub etc_metadata_image: Option<String>,
     #[serde(default)]
     pub etc_overlay_mutable: bool,
+    #[serde(default)]
+    pub special_filesystems: Vec<SpecialMount>,
+}
+
+#[derive(Deserialize)]
+pub struct SpecialMount {
+    pub mountpoint: String,
+    pub device: String,
+    pub fstype: String,
+    pub options: Vec<String>,
 }
 
 impl Config {
