@@ -279,30 +279,8 @@ in
       ''}
     '';
 
-    # /bin/sh is required by e.g. system(). /bin is a symlink to usr/bin to
-    # avoid the unmerged-usr taint.
-    system.activationScripts.binsh = lib.stringAfter [ "stdio" ] (
-      ''
-        # -m only applies to a newly created /usr/bin.
-        mkdir -p -m 0755 /usr/bin
-      ''
-      + lib.optionalString cfg.createBinSh ''
-        ln -sfn "${cfg.binsh}" /usr/bin/.sh.tmp
-        mv /usr/bin/.sh.tmp /usr/bin/sh # atomically replace /usr/bin/sh
-      ''
-      + ''
-        ln -sfn usr/bin /.bin.tmp
-        if [ -d /bin ] && [ ! -L /bin ]; then
-          # Older generations created /bin as a directory that only contains
-          # sh. Exchange it atomically so that /bin/sh never disappears.
-          mv --exchange --no-target-directory /.bin.tmp /bin
-          rm -f /.bin.tmp/sh
-          rmdir /.bin.tmp
-        else
-          mv --no-target-directory /.bin.tmp /bin # atomically replace /bin
-        fi
-      ''
-    );
+    # Handled by nixos-init activate, kept as an empty stub for deps compat.
+    system.activationScripts.binsh = lib.stringAfter [ "stdio" ] "";
 
   };
 
