@@ -1,5 +1,5 @@
 use std::{
-    env, fs,
+    fs,
     os::{
         fd::{AsFd, AsRawFd, BorrowedFd, OwnedFd},
         unix::fs::{FileTypeExt, MetadataExt, PermissionsExt, chown},
@@ -64,34 +64,6 @@ impl RwLayout {
     fn remove(&self) -> std::io::Result<()> {
         fs::remove_dir_all(&self.base)
     }
-}
-
-/// Entrypoint for `mount-etc-overlay`, called from the activation script.
-///
-/// The layout is passed on the command line because the activation
-/// script cannot reference its own toplevel.
-pub fn mount_etc_overlay() -> Result<()> {
-    let args: Vec<String> = env::args().collect();
-
-    let layout = match args.len() {
-        3 => EtcLayout {
-            etc: "/etc".to_string(),
-            metadata_image: args[1].clone(),
-            basedir: args[2].clone(),
-            rw: None,
-        },
-        4 => EtcLayout {
-            etc: "/etc".to_string(),
-            metadata_image: args[1].clone(),
-            basedir: args[2].clone(),
-            rw: Some(RwLayout {
-                base: PathBuf::from(&args[3]),
-            }),
-        },
-        _ => bail!("Usage: {} <metadata-image> <basedir> [<rw-state>]", args[0]),
-    };
-
-    setup_etc(&layout)
 }
 
 /// Entrypoint for `initrd-etc-overlay`, mounts `/sysroot/etc` from initrd.
