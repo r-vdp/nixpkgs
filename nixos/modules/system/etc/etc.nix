@@ -259,18 +259,10 @@ in
   config = {
 
     system.build.etc = etc;
+    # The overlay is (re)mounted by `nixos-init activate` directly.
     system.build.etcActivationCommands =
       if config.system.etc.overlay.enable then
-        # mount-etc-overlay handles both the initial mount (nixos-enter)
-        # and the atomic remount on switch-to-configuration.
-        ''
-          if [[ ! $IN_NIXOS_SYSTEMD_STAGE1 ]]; then
-            ${config.system.nixos-init.package}/bin/mount-etc-overlay \
-              ${config.system.build.etcMetadataImage} \
-              ${config.system.build.etcBasedir} \
-              ${lib.optionalString config.system.etc.overlay.mutable "/.rw-etc"}
-          fi
-        ''
+        ""
       else
         ''
           # Set up the statically computed bits of /etc.
