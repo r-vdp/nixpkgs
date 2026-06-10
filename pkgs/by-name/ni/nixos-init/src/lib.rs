@@ -16,7 +16,7 @@ use anyhow::{Context, Result, bail};
 pub use crate::{
     activate::{activate, activate_main},
     env_generator::env_generator,
-    etc_overlay::{initrd_etc_overlay, mount_etc_overlay},
+    etc_overlay::initrd_etc_overlay,
     init::init,
     initrd_init::initrd_init,
     path::{resolve_in_prefix, resolve_in_root},

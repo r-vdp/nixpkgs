@@ -48,7 +48,6 @@ rustPlatform.buildRustPackage (finalAttrs: {
     "activate"
     "initrd-init"
     "initrd-etc-overlay"
-    "mount-etc-overlay"
     "resolve-in-root"
     "env-generator"
   ];

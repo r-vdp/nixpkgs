@@ -10,6 +10,7 @@ use rustix::mount::{mount, mount_remount};
 
 use crate::{
     config::{Config, SpecialMount},
+    etc_overlay::{EtcLayout, RwLayout, setup_etc},
     fs::{atomic_symlink, split_mount_opts},
     proc_mounts::Mounts,
 };
@@ -34,7 +35,25 @@ pub fn activate_main() -> Result<()> {
     log::info!("Setting up special filesystems...");
     setup_special_filesystems(&config.special_filesystems)?;
 
-    activate("/", &toplevel, &config)
+    activate("/", &toplevel, &config)?;
+
+    // (Re)mount the /etc overlay. Skipped in initrd (initrd-etc-overlay
+    // handles /sysroot/etc there) and when the overlay isn't enabled
+    // (the perl setup-etc.pl path stays in the bash activation script).
+    if env::var_os("IN_NIXOS_SYSTEMD_STAGE1").is_none()
+        && let (Some(meta), Some(base)) = (&config.etc_metadata_image, &config.etc_basedir)
+    {
+        setup_etc(&EtcLayout {
+            etc: "/etc".to_owned(),
+            metadata_image: meta.clone(),
+            basedir: base.clone(),
+            rw: config.etc_overlay_mutable.then(|| RwLayout {
+                base: PathBuf::from("/.rw-etc"),
+            }),
+        })?;
+    }
+
+    Ok(())
 }
 
 /// Mount or remount each entry in `boot.specialFileSystems`.

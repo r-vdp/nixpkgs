@@ -53,12 +53,12 @@ closure. Currently nixos-init comes in at ~500 KiB.
   the systemd initrd. Discovers the metadata image and base directory from
   the booted generation's bootspec so the initrd does not depend on the
   toplevel.
-- `mount-etc-overlay`: Mounts or atomically remounts the `/etc` overlay for
-  the running system. Called from the activation script and `nixos-enter`.
-  Both entrypoints reconcile the mutable upperdir against the new metadata
-  layer (clearing stale opaque markers and removing whiteouts and copied-up
-  files that shadow managed entries), so the lowerdir always wins for paths
-  managed by `environment.etc`.
+- `activate`: Mounts or atomically remounts the `/etc` overlay for the
+  running system as part of activation. Both entrypoints reconcile the
+  mutable upperdir against the new metadata layer (clearing stale opaque
+  markers and removing whiteouts and copied-up files that shadow managed
+  entries), so the lowerdir always wins for paths managed by
+  `environment.etc`.
 - `resolve-in-root`: Figures out the canonical path inside a chroot.
 
 ## Future
