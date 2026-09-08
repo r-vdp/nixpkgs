@@ -107,12 +107,13 @@ stdenv.mkDerivation (finalAttrs: {
     mv packages/{app-cli,renderer,tools,utils,lib,htmlpack,turndown{,-plugin-gfm},fork-*} $out/lib/packages/
     rm -rf $out/lib/packages/lib/node_modules/canvas
 
-    # Remove extra files
-    rm -rf $out/lib/packages/app-cli/{app/*.test.ts,*.md,.*ignore,tests/,tools/,*.js,*.json,*.sh}
+    # Remove extra files, but keep package.json for the version command.
+    # app/ is the source tree, everything runs from build/.
+    rm -rf $out/lib/packages/app-cli/{app/,*.md,.*ignore,tests/,tools/,*.js,tsconfig.json,*.sh}
 
-    # Link final binary
-    chmod +x $out/lib/packages/app-cli/app/main.js
-    ln -s $out/lib/packages/app-cli/app/main.js $out/bin/joplin
+    # Link final binary, main.js requires ./package.json which only exists in build/
+    chmod +x $out/lib/packages/app-cli/build/main.js
+    ln -s $out/lib/packages/app-cli/build/main.js $out/bin/joplin
     patchShebangs $out/bin/joplin
 
     runHook postInstall
