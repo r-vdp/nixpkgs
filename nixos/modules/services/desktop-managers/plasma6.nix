@@ -226,8 +226,6 @@ in
       ++ lib.optional config.services.xserver.wacom.enable wacomtablet
       ++ lib.optional config.services.flatpak.enable flatpak-kcm;
 
-    # Packages from above that ship D-Bus service files.  The D-Bus daemons do
-    # not look at the system profile, so they have to be registered explicitly.
     services.dbus.packages =
       with kdePackages;
       [
