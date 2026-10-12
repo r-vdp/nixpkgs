@@ -127,6 +127,11 @@ in
 
       environment.etc."dbus-1".source = configDir;
 
+      # DEs link all of /share, but this causes duplicate dbus config files.
+      environment.extraSetup = ''
+        rm -rf $out/share/dbus-1/services $out/share/dbus-1/system-services
+      '';
+
       users.users.messagebus = {
         uid = config.ids.uids.messagebus;
         description = "D-Bus system message bus daemon user";
