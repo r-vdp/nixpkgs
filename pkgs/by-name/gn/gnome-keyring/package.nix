@@ -16,10 +16,12 @@
   libcap_ng,
   libselinux,
   p11-kit,
+  systemdLibs,
   wrapGAppsNoGuiHook,
   docbook-xsl-nons,
   docbook_xml_dtd_43,
   gnome,
+  withSystemd ? lib.meta.availableOn stdenv.hostPlatform systemdLibs,
   useWrappedDaemon ? false,
 }:
 
@@ -57,7 +59,8 @@ stdenv.mkDerivation (finalAttrs: {
     libselinux
     gcr_3
     p11-kit
-  ];
+  ]
+  ++ lib.optional withSystemd systemdLibs;
 
   nativeCheckInputs = [
     dbus
@@ -68,8 +71,7 @@ stdenv.mkDerivation (finalAttrs: {
     # installation directories
     "-Dpkcs11-config=${placeholder "out"}/etc/pkcs11" # todo: this should probably be /share/p11-kit/modules
     "-Dpkcs11-modules=${placeholder "out"}/lib/pkcs11"
-    # TODO: enable socket activation
-    "-Dsystemd=disabled"
+    (lib.mesonEnable "systemd" withSystemd)
   ];
 
   # Tends to fail non-deterministically.

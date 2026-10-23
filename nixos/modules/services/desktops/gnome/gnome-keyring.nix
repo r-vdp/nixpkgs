@@ -36,5 +36,18 @@ in
     xdg.portal.extraPortals = [ pkgs.gnome-keyring ];
 
     security.pam.services.login.enableGnomeKeyring = true;
+
+    # The socket listens on %t/keyring/control; pam_gnome_keyring connects
+    # there to send the unlock password, which socket-activates the daemon
+    # inside the named unit so it has a stable place for drop-ins and
+    # restarts.
+    systemd.packages = [ pkgs.gnome-keyring ];
+    systemd.user.sockets.gnome-keyring-daemon = {
+      wantedBy = [ "sockets.target" ];
+      # Greeters and other system users get a user manager too, but have
+      # no writable home to keep keyrings in.
+      unitConfig.ConditionUser = "!@system";
+    };
+    systemd.user.services.gnome-keyring-daemon.serviceConfig.Slice = "session.slice";
   };
 }
