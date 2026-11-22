@@ -149,6 +149,29 @@ in
         '';
       };
 
+      logLimit = lib.mkOption {
+        type = lib.types.nullOr (lib.types.separatedString " ");
+        default = null;
+        example = "10/second burst 50 packets";
+        description = ''
+          Rate limit for the log rules of the firewall, i.e. those of
+          {option}`networking.firewall.logRefusedConnections`,
+          {option}`networking.firewall.logRefusedPackets` and
+          {option}`networking.firewall.logReversePathDrops`. Each rule
+          gets its own limit. Packets over the limit are still refused,
+          just not logged. Without a limit, a single misbehaving host
+          can flood the kernel log.
+
+          For the iptables based firewall, it should be set like
+          "--limit 10/second --limit-burst 50".
+
+          For the nftables based firewall, it should be set like
+          "10/second" or "10/second burst 50 packets".
+
+          Not supported with the firewalld based firewall.
+        '';
+      };
+
       rejectPackets = lib.mkOption {
         type = lib.types.bool;
         default = false;

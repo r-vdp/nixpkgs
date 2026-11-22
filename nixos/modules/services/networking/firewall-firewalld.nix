@@ -13,6 +13,10 @@ in
           Create zones with `services.firewalld.zones` instead.
         '';
       }
+      {
+        assertion = cfg.logLimit == null;
+        message = "networking.firewall.logLimit is not supported with the firewalld based firewall.";
+      }
     ];
 
     boot.kernel.sysctl."net.ipv4.conf.all.rp_filter" =

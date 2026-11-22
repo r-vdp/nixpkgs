@@ -10,6 +10,12 @@ let
 
   ifaceSet = lib.concatStringsSep ", " (map (x: ''"${x}"'') cfg.trustedInterfaces);
 
+  log =
+    prefix:
+    ''${
+      lib.optionalString (cfg.logLimit != null) "limit rate ${cfg.logLimit} "
+    }log level info prefix "${prefix}: "'';
+
   portsToNftSet =
     ports: portRanges:
     lib.concatStringsSep ", " (
@@ -74,6 +80,10 @@ in
         message = "nftables syntax like \"2/second\" should be used in networking.firewall.pingLimit";
       }
       {
+        assertion = cfg.logLimit == null || !(lib.hasPrefix "--" cfg.logLimit);
+        message = "nftables syntax like \"10/second\" should be used in networking.firewall.logLimit";
+      }
+      {
         assertion = config.networking.nftables.rulesetFile == null;
         message = "networking.nftables.rulesetFile conflicts with the firewall";
       }
@@ -100,7 +110,7 @@ in
           jump rpfilter-allow
 
           ${lib.optionalString cfg.logReversePathDrops ''
-            log level info prefix "rpfilter drop: "
+            ${log "rpfilter drop"}
           ''}
 
         }
@@ -131,14 +141,14 @@ in
         }
 
         ${lib.optionalString cfg.logRefusedConnections ''
-          tcp flags syn / fin,syn,rst,ack log level info prefix "refused connection: "
+          tcp flags syn / fin,syn,rst,ack ${log "refused connection"}
         ''}
         ${lib.optionalString (cfg.logRefusedPackets && !cfg.logRefusedUnicastsOnly) ''
-          pkttype broadcast log level info prefix "refused broadcast: "
-          pkttype multicast log level info prefix "refused multicast: "
+          pkttype broadcast ${log "refused broadcast"}
+          pkttype multicast ${log "refused multicast"}
         ''}
         ${lib.optionalString cfg.logRefusedPackets ''
-          pkttype host log level info prefix "refused packet: "
+          pkttype host ${log "refused packet"}
         ''}
 
         ${lib.optionalString cfg.rejectPackets ''

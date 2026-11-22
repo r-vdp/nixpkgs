@@ -47,6 +47,12 @@ let
 
   helpers = import ./helpers.nix { inherit config lib; };
 
+  log =
+    prefix:
+    ''${
+      lib.optionalString (cfg.logLimit != null) "-m limit ${cfg.logLimit} "
+    }-j LOG --log-level info --log-prefix "${prefix}: "'';
+
   writeShScript =
     name: text:
     let
@@ -99,18 +105,18 @@ let
     ip46tables -N nixos-fw-log-refuse
 
     ${lib.optionalString cfg.logRefusedConnections ''
-      ip46tables -A nixos-fw-log-refuse -p tcp --syn -j LOG --log-level info --log-prefix "refused connection: "
+      ip46tables -A nixos-fw-log-refuse -p tcp --syn ${log "refused connection"}
     ''}
     ${lib.optionalString (cfg.logRefusedPackets && !cfg.logRefusedUnicastsOnly) ''
       ip46tables -A nixos-fw-log-refuse -m pkttype --pkt-type broadcast \
-        -j LOG --log-level info --log-prefix "refused broadcast: "
+        ${log "refused broadcast"}
       ip46tables -A nixos-fw-log-refuse -m pkttype --pkt-type multicast \
-        -j LOG --log-level info --log-prefix "refused multicast: "
+        ${log "refused multicast"}
     ''}
     ip46tables -A nixos-fw-log-refuse -m pkttype ! --pkt-type unicast -j nixos-fw-refuse
     ${lib.optionalString cfg.logRefusedPackets ''
       ip46tables -A nixos-fw-log-refuse \
-        -j LOG --log-level info --log-prefix "refused packet: "
+        ${log "refused packet"}
     ''}
     ip46tables -A nixos-fw-log-refuse -j nixos-fw-refuse
 
@@ -138,7 +144,7 @@ let
       iptables -t mangle -A nixos-fw-rpfilter -s 0.0.0.0 -d 255.255.255.255 -p udp --sport 68 --dport 67 -j RETURN
 
       ${lib.optionalString cfg.logReversePathDrops ''
-        ip46tables -t mangle -A nixos-fw-rpfilter -j LOG --log-level info --log-prefix "rpfilter drop: "
+        ip46tables -t mangle -A nixos-fw-rpfilter ${log "rpfilter drop"}
       ''}
       ip46tables -t mangle -A nixos-fw-rpfilter -j DROP
 
@@ -327,6 +333,10 @@ in
       {
         assertion = cfg.checkReversePath == false || kernelHasRPFilter;
         message = "This kernel does not support rpfilter";
+      }
+      {
+        assertion = cfg.logLimit == null || lib.hasPrefix "--" cfg.logLimit;
+        message = "iptables syntax like \"--limit 10/second\" should be used in networking.firewall.logLimit";
       }
     ];
 

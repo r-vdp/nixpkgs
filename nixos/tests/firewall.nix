@@ -19,6 +19,14 @@
           enable = true;
           inherit backend;
           logRefusedPackets = true;
+          logRefusedConnections = true;
+          logReversePathDrops = true;
+          logLimit =
+            {
+              iptables = "--limit 10/second --limit-burst 50";
+              nftables = "10/second burst 50 packets";
+            }
+            .${backend} or null;
           # Syntax smoke test, not actually verified otherwise
           allowedTCPPorts = [
             25
@@ -115,6 +123,14 @@
       walled.wait_for_unit("httpd")
       ${waitForFirewalld}
       attacker.wait_for_unit("network.target")
+
+      ${
+        {
+          iptables = ''walled.succeed("iptables -S nixos-fw-log-refuse | grep -F -- '-m limit --limit 10/sec --limit-burst 50 -j LOG'")'';
+          nftables = ''walled.succeed("nft list chain inet nixos-fw input | grep -F 'limit rate 10/second burst 50 packets log'")'';
+        }
+        .${backend} or ""
+      }
 
       # Local connections should still work.
       walled.succeed("curl -v http://localhost/ >&2")
